@@ -21,6 +21,8 @@
     <color name="grey_700">#646464</color>
     <color name="black">#000000</color>
 
+    <color name="light_blue">#46e3e7</color>
+
     <!-- using the "Light Blue" Material Palette -->
     <color name="primary">#03A9F4</color>  <!-- 500 -->
     <color name="primary_dark">#0288D1</color>  <!-- 700 -->

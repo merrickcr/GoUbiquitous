@@ -48,6 +48,9 @@ import android.widget.TextView;
 import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * Encapsulates fetching the forecast and displaying it as a {@link android.support.v7.widget.RecyclerView} layout.
  */
@@ -65,7 +68,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     private static final int FORECAST_LOADER = 0;
     // For the forecast view we're showing only a small subset of the stored data.
     // Specify the columns we need.
-    private static final String[] FORECAST_COLUMNS = {
+    public static final String[] FORECAST_COLUMNS = {
             // In this case the id needs to be fully qualified with a table name, since
             // the content provider joins the location & weather tables in the background
             // (both have an _id column)
@@ -85,15 +88,15 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
     // These indices are tied to FORECAST_COLUMNS.  If FORECAST_COLUMNS changes, these
     // must change.
-    static final int COL_WEATHER_ID = 0;
-    static final int COL_WEATHER_DATE = 1;
-    static final int COL_WEATHER_DESC = 2;
-    static final int COL_WEATHER_MAX_TEMP = 3;
-    static final int COL_WEATHER_MIN_TEMP = 4;
-    static final int COL_LOCATION_SETTING = 5;
-    static final int COL_WEATHER_CONDITION_ID = 6;
-    static final int COL_COORD_LAT = 7;
-    static final int COL_COORD_LONG = 8;
+    public static final int COL_WEATHER_ID = 0;
+    public static final int COL_WEATHER_DATE = 1;
+    public static final int COL_WEATHER_DESC = 2;
+    public static final int COL_WEATHER_MAX_TEMP = 3;
+    public static final int COL_WEATHER_MIN_TEMP = 4;
+    public static final int COL_LOCATION_SETTING = 5;
+    public static final int COL_WEATHER_CONDITION_ID = 6;
+    public static final int COL_COORD_LAT = 7;
+    public static final int COL_COORD_LONG = 8;
 
     /**
      * A callback interface that all activities containing this fragment must
@@ -328,6 +331,28 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         mForecastAdapter.swapCursor(data);
         updateEmptyView();
+
+
+        //get todays weather
+        data.moveToFirst();
+        //get necessary data
+
+        int weatherId = data.getInt(ForecastFragment.COL_WEATHER_CONDITION_ID);
+        String minTemp = String.valueOf(data.getDouble(ForecastFragment.COL_WEATHER_MIN_TEMP));
+        String maxTemp = String.valueOf(data.getDouble(ForecastFragment.COL_WEATHER_MAX_TEMP));
+        int weatherImage = Utility.getArtResourceForWeatherCondition(weatherId);
+
+        try {
+            JSONObject weatherJson = new JSONObject();
+            weatherJson.put("min", minTemp);
+            weatherJson.put("max", maxTemp);
+            weatherJson.put("art", weatherImage);
+        }
+        catch(JSONException e){
+            Log.e("JSON", e.toString());
+        }
+
+
         if ( data.getCount() == 0 ) {
             getActivity().supportStartPostponedEnterTransition();
         } else {

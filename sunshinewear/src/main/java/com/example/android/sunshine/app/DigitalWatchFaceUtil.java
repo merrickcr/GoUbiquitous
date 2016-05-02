@@ -16,10 +16,6 @@
 
 package com.example.android.sunshine.app;
 
-import android.graphics.Color;
-import android.net.Uri;
-import android.util.Log;
-
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.DataApi;
@@ -29,6 +25,10 @@ import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.Wearable;
+
+import android.graphics.Color;
+import android.net.Uri;
+import android.util.Log;
 
 public final class DigitalWatchFaceUtil {
     private static final String TAG = "DigitalWatchFaceUtil";
