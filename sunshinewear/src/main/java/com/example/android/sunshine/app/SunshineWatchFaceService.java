@@ -265,7 +265,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         public void onTimeTick() {
             super.onTimeTick();
 
-
+            invalidate();
         }
 
         @Override
