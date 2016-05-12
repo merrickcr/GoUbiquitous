@@ -2,12 +2,16 @@ package com.example.android.sunshine.app;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import android.content.res.Resources;
@@ -29,9 +33,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.Format;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
@@ -58,7 +64,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
     private float clockTextSize = 75f;
 
-    private float tempTextSize = 40f;
+    private float tempTextSize = 20f;
 
     private float dateTextSize = 25f;
 
@@ -70,12 +76,15 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
     private String metric;
 
+    final static String PATH_DATA = "/sunshine_wear";
+
     @Override
     public Engine onCreateEngine() {
         engine = new Engine();
 
         return engine;
     }
+
 
     private class Engine extends CanvasWatchFaceService.Engine implements DataApi.DataListener,
     GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
@@ -91,6 +100,43 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         int backgroundColor;
         int clockColor;
 
+
+        public void sendData(final String data){
+
+            new Thread(new Runnable(){
+
+                @Override
+                public void run() {
+                    //if not connected, try to reconnect?
+                    if(!mGoogleApiClient.isConnected()){
+                        mGoogleApiClient.blockingConnect(10, TimeUnit.SECONDS);
+                    }
+
+                    //if not connected after connect above
+                    if(!mGoogleApiClient.isConnected()){
+                        Log.e("SUNSHINE WEAR", "Failed to connect to android wear");
+                    }
+
+                    if(mGoogleApiClient.isConnected()){
+                        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(PATH_DATA);
+                        putDataMapRequest.getDataMap().putString("data", data);
+                        putDataMapRequest.getDataMap().putDouble("timestamp", System.currentTimeMillis());
+
+                        PutDataRequest request = putDataMapRequest.asPutDataRequest();
+
+                        PendingResult<DataApi.DataItemResult> pendingResult = Wearable.DataApi.putDataItem(mGoogleApiClient, request);
+
+                        pendingResult.setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
+                            @Override
+                            public void onResult(DataApi.DataItemResult dataItemResult) {
+                                Log.e("SUNSHINE_WEAR", "RESULT RECEIVED");
+                            }
+                        });
+                    }
+                }
+            }).start();
+
+        }
 
         @Override
         public void onDataChanged(DataEventBuffer dataEventBuffer) {
@@ -122,6 +168,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             }
 
             Wearable.DataApi.addListener(mGoogleApiClient, Engine.this);
+
+            sendData("update");
         }
 
         @Override  // GoogleApiClient.ConnectionCallbacks
@@ -137,6 +185,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 Log.d(TAG, "onConnectionFailed: " + result);
             }
         }
+
 
         private class LoadWeatherDataTask extends AsyncTask<Void, Void, String> {
 
@@ -215,6 +264,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         @Override
         public void onTimeTick() {
             super.onTimeTick();
+
+
         }
 
         @Override
@@ -243,14 +294,14 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             //Draw Date
             String dateString = new SimpleDateFormat("EEE, MMM dd yyyy").format(new Date());
 
-            int dateTextOffsetY = -45;
+            int dateTextOffsetY = -40;
             float dateStartX = bounds.centerX() - datePaint.measureText(dateString)/2;
             float dateStartY = canvas.getHeight()/2+dateTextOffsetY;
 
             canvas.drawText(dateString, dateStartX, dateStartY, datePaint);
 
-            int tempOffsetX = 50;
-            int tempOffsetY = 10;
+            int tempOffsetX = 60;
+            int tempOffsetY = 25;
 
             Paint minTempPaint = new Paint(tempPaint);
             minTempPaint.setAlpha(190);
@@ -266,6 +317,13 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
             Paint weatherImagePaint = new Paint();
 
+            if(weatherId != null) {
+                weatherResourceId = SunshineUtils.getArtResourceForWeatherCondition(Integer.valueOf(weatherId));
+            }
+            else{
+                weatherResourceId = 0;
+            }
+
             if(weatherResourceId <= 0){
                 weatherResourceId = R.drawable.art_fog;
             }
@@ -273,7 +331,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             Bitmap weatherImage = BitmapFactory.decodeResource(getResources(), weatherResourceId);
 
             float weatherImageStartX = bounds.centerX() - weatherImage.getWidth()/2;
-            float weatherImageStartY = bounds.centerY() - weatherImage.getHeight()/3 + 5;
+            float weatherImageStartY = bounds.centerY() - weatherImage.getHeight()/3 + 10;
 
             weatherImagePaint.setAntiAlias(true);
 
@@ -295,6 +353,11 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             weatherResourceId = weatherJson.optInt("art");
             metric = weatherJson.optString("metric");
             weatherId = weatherJson.optString("weatherId");
+
+            if(metric.equals("imperial")){
+                tempHigh = String.valueOf(SunshineUtils.celsiusToFahrenheit(Double.valueOf(tempHigh))) + "\u00b0";
+                tempLow = String.valueOf(SunshineUtils.celsiusToFahrenheit(Double.valueOf(tempLow))) + "\u00b0";
+            }
 
             engine.postInvalidate();
 
@@ -318,6 +381,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         return timeString;
 
     }
+
+
 
     private Paint createTextPaint(int defaultInteractiveColor) {
         return createTextPaint(defaultInteractiveColor, NORMAL_TYPEFACE);

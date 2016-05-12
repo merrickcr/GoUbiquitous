@@ -5,6 +5,11 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -30,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 public class SunshineWearableService extends WearableListenerService implements Loader.OnLoadCompleteListener<Cursor>, GoogleApiClient
     .ConnectionCallbacks, GoogleApiClient
-    .OnConnectionFailedListener{
+    .OnConnectionFailedListener, DataApi.DataListener{
 
     private GoogleApiClient client;
     private boolean isConnected = false;
@@ -132,7 +137,9 @@ public class SunshineWearableService extends WearableListenerService implements 
 
         //todo send weather data to Watch
 
-        if(weatherCursor != null){
+        Wearable.DataApi.addListener(client, SunshineWearableService.this);
+
+        if(weatherCursor != null && client.isConnected()){
             sendWeatherData(weatherCursor);
         }
     }
@@ -166,6 +173,7 @@ public class SunshineWearableService extends WearableListenerService implements 
                 if(client.isConnected()){
                     PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(PATH_DATA);
                     putDataMapRequest.getDataMap().putString("data", data);
+                    putDataMapRequest.getDataMap().putDouble("timestamp", System.currentTimeMillis());
 
                     PutDataRequest request = putDataMapRequest.asPutDataRequest();
 
@@ -194,5 +202,28 @@ public class SunshineWearableService extends WearableListenerService implements 
 
         weatherCursor = data;
         sendWeatherData(data);
+    }
+
+    @Override
+    public void onDataChanged(DataEventBuffer dataEventBuffer) {
+
+        for (DataEvent event : dataEventBuffer) {
+            if (event.getType() == DataEvent.TYPE_CHANGED) {
+                // DataItem changed
+                DataItem item = event.getDataItem();
+                if (item.getUri().getPath().compareTo("/sunshine_wear") == 0) {
+                    DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
+                    //update current weather
+                    String data = dataMap.getString("data");
+
+                    if(data.equals("update")) {
+                        sendWeatherData(weatherCursor);
+                    }
+                }
+
+            } else if (event.getType() == DataEvent.TYPE_DELETED) {
+                // DataItem deleted
+            }
+        }
     }
 }
