@@ -348,7 +348,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
         try {
             JSONObject weatherJson = new JSONObject(data);
-            tempHigh = weatherJson.optString("max");
+            tempHigh = weatherJson.optString("max") ;
             tempLow = weatherJson.optString("min");
             weatherResourceId = weatherJson.optInt("art");
             metric = weatherJson.optString("metric");
@@ -357,6 +357,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             if(metric.equals("imperial")){
                 tempHigh = String.valueOf(SunshineUtils.celsiusToFahrenheit(Double.valueOf(tempHigh))) + "\u00b0";
                 tempLow = String.valueOf(SunshineUtils.celsiusToFahrenheit(Double.valueOf(tempLow))) + "\u00b0";
+            }
+            else{
+                tempHigh += "\u00b0";
+                tempLow += "\u00b0";
             }
 
             engine.postInvalidate();

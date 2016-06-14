@@ -5,7 +5,7 @@ import java.text.DecimalFormat;
 public class SunshineUtils {
 
     public static String celsiusToFahrenheit(double value){
-        return new DecimalFormat("##.#").format((9/5*value)+32);
+        return new DecimalFormat("##.#").format(((9f/5f)*value)+32f);
     }
 
 
